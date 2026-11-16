@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Helper wrapper for Hermes to orchestrate the shared `opencode serve` instance.
+set -euo pipefail
+
+HOST="${OPENCODE_HOST:-${OPENCODE_SERVER_URL:-http://opencode:4096}}"
+USER_NAME="${OPENCODE_SERVER_USERNAME:-opencode}"
+PASSWORD="${OPENCODE_SERVER_PASSWORD:-${OPENCODE_PASSWORD:-}}"
+
+if [[ -z "${PASSWORD}" ]]; then
+  echo "error: OPENCODE_SERVER_PASSWORD (or OPENCODE_PASSWORD) is not set" >&2
+  exit 1
+fi
+
+case "${1:-}" in
+  health)
+    exec curl -fsS -u "${USER_NAME}:${PASSWORD}" "${HOST%/}/global/health"
+    ;;
+  sessions)
+    exec curl -fsS -u "${USER_NAME}:${PASSWORD}" "${HOST%/}/session"
+    ;;
+  ""|-h|--help|help)
+    cat <<EOF
+Usage:
+  opencode-remote health                          # Check remote OpenCode server health
+  opencode-remote sessions                        # List active sessions on OpenCode server
+  opencode-remote [opencode run flags] "<prompt>" # Dispatch a coding task via opencode run --attach
+
+Environment:
+  OPENCODE_HOST              Remote server origin (default: http://opencode:4096)
+  OPENCODE_SERVER_USERNAME   Basic Auth username  (default: opencode)
+  OPENCODE_SERVER_PASSWORD   Basic Auth password  (required)
+EOF
+    [[ -z "${1:-}" ]] && exit 1 || exit 0
+    ;;
+  *)
+    exec opencode run \
+      --attach "${HOST%/}" \
+      --username "${USER_NAME}" \
+      --password "${PASSWORD}" \
+      "$@"
+    ;;
+esac
