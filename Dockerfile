@@ -73,7 +73,9 @@ COPY skills/software-development/opencode-orchestrator/SKILL.md \
      /opt/hermes/skills/software-development/opencode-orchestrator/SKILL.md
 
 RUN chmod 755 /usr/local/bin/opencode-remote && \
-    chmod 644 /opt/hermes/skills/software-development/opencode-orchestrator/SKILL.md
+    chmod 644 /opt/hermes/skills/software-development/opencode-orchestrator/SKILL.md && \
+    mkdir -p /workspace && \
+    chmod 1777 /workspace
 
 # Preserve Hermes PATH precedence (/opt/hermes/bin must remain first for the privilege-drop shim)
 # and register in /etc/profile.d so login shells (`bash -lic`) retain Go and /npm-global/bin

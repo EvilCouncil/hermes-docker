@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Helper wrapper for Hermes to orchestrate the shared `opencode serve` instance.
+# Helper wrapper for Hermes to orchestrate the shared OpenCode v2 (`opencode serve`) instance.
 set -euo pipefail
 
 HOST="${OPENCODE_HOST:-${OPENCODE_SERVER_URL:-http://opencode:4096}}"
@@ -11,19 +11,45 @@ if [[ -z "${PASSWORD}" ]]; then
   exit 1
 fi
 
+export OPENCODE_SERVER_USERNAME="${USER_NAME}"
+export OPENCODE_SERVER_PASSWORD="${PASSWORD}"
+export OPENCODE_PASSWORD="${PASSWORD}"
+
+TARGET_DIR="/workspace"
+if [[ "${1:-}" == "--dir" && -n "${2:-}" ]]; then
+  TARGET_DIR="$2"
+  shift 2
+fi
+
+# OpenCode v2 CLI sends process.cwd() as x-opencode-directory; create an empty
+# local path stub under /workspace so the remote OpenCode server resolves the target repo.
+mkdir -p "${TARGET_DIR}" 2>/dev/null || true
+cd "${TARGET_DIR}"
+
 case "${1:-}" in
   health)
-    exec curl -fsS -u "${USER_NAME}:${PASSWORD}" "${HOST%/}/global/health"
+    opencode api --server "${HOST%/}" --header "x-opencode-directory:${TARGET_DIR}" GET /api/config >/dev/null
+    echo '{"healthy":true,"server":"'"${HOST%/}"'","directory":"'"${TARGET_DIR}"'"}'
+    ;;
+  projects)
+    exec opencode api --server "${HOST%/}" --header "x-opencode-directory:/workspace" GET /api/project
     ;;
   sessions)
-    exec curl -fsS -u "${USER_NAME}:${PASSWORD}" "${HOST%/}/session"
+    shift
+    exec opencode session list --server "${HOST%/}" "$@"
+    ;;
+  api)
+    shift
+    exec opencode api --server "${HOST%/}" --header "x-opencode-directory:${TARGET_DIR}" "$@"
     ;;
   ""|-h|--help|help)
     cat <<EOF
 Usage:
-  opencode-remote health                          # Check remote OpenCode server health
-  opencode-remote sessions                        # List active sessions on OpenCode server
-  opencode-remote [opencode run flags] "<prompt>" # Dispatch a coding task via opencode run --attach
+  opencode-remote [--dir /workspace/<repo>] health                     # Verify OpenCode v2 API connectivity
+  opencode-remote projects                                             # List known projects on OpenCode server
+  opencode-remote [--dir /workspace/<repo>] sessions                   # List sessions in target repo
+  opencode-remote [--dir /workspace/<repo>] api <METHOD> <PATH> [...]  # Raw OpenCode v2 API request
+  opencode-remote [--dir /workspace/<repo>] [run flags] "<prompt>"     # Dispatch a coding task via opencode run --server
 
 Environment:
   OPENCODE_HOST              Remote server origin (default: http://opencode:4096)
@@ -33,10 +59,6 @@ EOF
     [[ -z "${1:-}" ]] && exit 1 || exit 0
     ;;
   *)
-    exec opencode run \
-      --attach "${HOST%/}" \
-      --username "${USER_NAME}" \
-      --password "${PASSWORD}" \
-      "$@"
+    exec opencode run --server "${HOST%/}" "$@"
     ;;
 esac
