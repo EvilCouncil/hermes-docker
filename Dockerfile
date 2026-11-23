@@ -1,4 +1,4 @@
-ARG HERMES_VERSION=0.23.1
+ARG HERMES_VERSION=0.23.3
 ARG HERMES_IMAGE=nousresearch/hermes-agent:v${HERMES_VERSION}
 
 # Stage 1: install official Go toolchain
@@ -16,10 +16,10 @@ RUN curl -fsSL -o /tmp/go.tar.gz "https://go.dev/dl/go${GO_VERSION}.linux-amd64.
 # Stage 2: install npm packages & OpenCode v2 CLI into /npm-global
 FROM ${HERMES_IMAGE} AS npm-builder
 
-ARG OPENCODE_VERSION=2.3.0
-ARG PI_CODING_AGENT_VERSION=1.5.2
-ARG PI_SUBAGENTS_VERSION=0.88.1
-ARG PI_WEBUI_VERSION=0.11.1
+ARG OPENCODE_VERSION=2.4.1
+ARG PI_CODING_AGENT_VERSION=1.6.0
+ARG PI_SUBAGENTS_VERSION=0.90.0
+ARG PI_WEBUI_VERSION=0.11.3
 
 USER root
 RUN npm install -g --prefix /npm-global \
